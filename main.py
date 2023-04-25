@@ -76,6 +76,12 @@ class TranslateGUI(object):
         # create the button function
         def button_clicked():
             orig_text = root.clipboard_get()
+            if check_box_var.get() == 1:
+                orig_text = orig_text.splitlines()
+                orig_text = " ".join(orig_text)
+            else:
+                pass
+
             translated_text = self.tapi.translate(orig_text)
 
             text1.delete("1.0", tk.END)
@@ -88,6 +94,11 @@ class TranslateGUI(object):
         
         # place the widgets on the window
         button.pack(pady=10)
+
+        check_box_var = tk.IntVar()
+        check_box_var.set(1)
+        check_box = tk.Checkbutton(root, text="去除换行符", variable=check_box_var)
+        check_box.pack(pady=10)
 
         # create the text areas
 
