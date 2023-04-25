@@ -100,6 +100,36 @@ class TranslateGUI(object):
         check_box = tk.Checkbutton(root, text="去除换行符", variable=check_box_var)
         check_box.pack(pady=10)
 
+        check_box_monitor_var = tk.IntVar()
+        check_box_monitor_var.set(0)
+        check_box_monitor = tk.Checkbutton(root, text="检测剪贴板", 
+                                           variable=check_box_monitor_var, 
+                                           command=lambda: monitor_clipboard(check_box_monitor_var))
+        check_box_monitor.pack(pady=10)
+
+        self.run_after_id = None
+
+        def run_monitor():
+
+            if check_box_monitor_var.get() == 0 and self.run_after_id:
+                root.after_cancel(self.run_after_id)
+
+        
+            old_text = text1.get("1.0", "end-1c")
+            orig_text = root.clipboard_get()
+
+            if orig_text != old_text:
+                text1.delete("1.0", tk.END)
+                text1.insert(tk.END, orig_text)
+        
+            self.run_after_id = root.after(1000, run_monitor)
+
+        def monitor_clipboard(var):
+            if var.get() == 1:
+                run_monitor()
+            elif var.get() == 0 and self.run_after_id:
+                root.after_cancel(self.run_after_id)
+
         # create the text areas
 
         frame = tk.Frame(root)
@@ -110,7 +140,7 @@ class TranslateGUI(object):
         text2 = tk.Text(frame, font=font)
 
 
-        text1.insert(tk.END, "请点击按钮翻译剪切板中的内容")
+        text1.insert(tk.END, "请点击按钮翻译剪贴板中的内容")
 
         text1.pack(pady=10, fill='both', padx=10)
         text2.pack(fill='both', padx=10)
