@@ -12,6 +12,16 @@ import tkinter as tk
 ##############################################################################
 
 class TranslateAPI(object):
+
+    def translate(self, text: str) -> str:
+        return text
+
+    def load_conf(self, key, default=None):
+        if key not in os.environ and default is None:
+            raise Exception("Please Set %s"%key)
+        return os.environ.get(key, default)
+
+class MicrosoftTranslateAPI(TranslateAPI):
     def __init__(self):
         self.resource_key = self.load_conf("ST_RES_KEY")
         self.region = self.load_conf("ST_REGION", "eastasia")
@@ -31,10 +41,6 @@ class TranslateAPI(object):
             'to': ['zh-Hans']
         }
 
-    def load_conf(self, key, default=None):
-        if key not in os.environ and default is None:
-            raise Exception("Please Set %s"%key)
-        return os.environ.get(key, default)
 
     def translate(self, text):
         translated_text = ""
@@ -70,7 +76,7 @@ class TranslateGUIModel(object):
         self.original_text = ""
         self.translated_text = ""
 
-        self.tapi = TranslateAPI()
+        self.tapi = MicrosoftTranslateAPI()
 
     def translate(self, orig_text):
         self.original_text = orig_text
@@ -78,26 +84,26 @@ class TranslateGUIModel(object):
 
 class TranslateGUIView(object):
 
-    def __init__(self, root) -> None:
-        self.root = root
+    def __init__(self) -> None:
+        self.root = tk.Tk()
 
         # create the button
-        self.button = tk.Button(root, text="Paste and Translate")
+        self.button = tk.Button(self.root, text="Paste and Translate")
         
         # place the widgets on the window
         self.button.pack(pady=10)
 
         self.check_box_trim_var = tk.IntVar()
         self.check_box_trim_var.set(1)
-        self.check_box_trim = tk.Checkbutton(root, text="去除换行符", variable=self.check_box_trim_var)
+        self.check_box_trim = tk.Checkbutton(self.root, text="去除换行符", variable=self.check_box_trim_var)
         self.check_box_trim.pack(pady=10)
 
         self.check_box_monitor_var = tk.IntVar()
         self.check_box_monitor_var.set(0)
-        self.check_box_monitor = tk.Checkbutton(root, text="检测剪贴板", variable=self.check_box_monitor_var)
+        self.check_box_monitor = tk.Checkbutton(self.root, text="监听剪贴板", variable=self.check_box_monitor_var)
         self.check_box_monitor.pack(pady=10)
 
-        self.frame = tk.Frame(root)
+        self.frame = tk.Frame(self.root)
         self.frame.pack()
 
         font = ("DejaVu Sans Mono", 12)
@@ -135,6 +141,7 @@ class TranslateGUIController(object):
 
     def paste_and_translate(self):
         orig_text = self.view.get_clipboard()
+        # remove the CR
         if self.view.check_box_trim_var.get() == 1:
             orig_text = orig_text.splitlines()
             orig_text = " ".join(orig_text)
@@ -170,104 +177,12 @@ class TranslateGUIController(object):
 
 class TranslateGUI(object):
     def __init__(self):
-        self.tapi = TranslateAPI()
+        self.model = TranslateGUIModel()
+        self.view = TranslateGUIView()
+        self.controller = TranslateGUIController(self.model, self.view)
 
     def run(self):
-
-
-        # create the main window
-        root = tk.Tk()
-        model = TranslateGUIModel()
-        view = TranslateGUIView(root)
-        controller = TranslateGUIController(model, view)
-        root.mainloop()
-
-class TranslateGUILegacy(object):
-    def __init__(self):
-        self.tapi = TranslateAPI()
-
-    def run(self):
-        import tkinter as tk
-
-        # create the main window
-        root = tk.Tk()
-        root.geometry("800x800")
-       
-        # create the button function
-        def button_clicked():
-            orig_text = root.clipboard_get()
-            if check_box_var.get() == 1:
-                orig_text = orig_text.splitlines()
-                orig_text = " ".join(orig_text)
-            else:
-                pass
-
-            translated_text = self.tapi.translate(orig_text)
-
-            text1.delete("1.0", tk.END)
-            text1.insert(tk.END, orig_text)
-            text2.delete("1.0", tk.END)
-            text2.insert(tk.END, translated_text)
-        
-        # create the button
-        button = tk.Button(root, text="Paste and Translate", command=button_clicked)
-        
-        # place the widgets on the window
-        button.pack(pady=10)
-
-        check_box_var = tk.IntVar()
-        check_box_var.set(1)
-        check_box = tk.Checkbutton(root, text="去除换行符", variable=check_box_var)
-        check_box.pack(pady=10)
-
-        check_box_monitor_var = tk.IntVar()
-        check_box_monitor_var.set(0)
-        check_box_monitor = tk.Checkbutton(root, text="检测剪贴板", 
-                                           variable=check_box_monitor_var, 
-                                           command=lambda: monitor_clipboard(check_box_monitor_var))
-        check_box_monitor.pack(pady=10)
-
-        self.run_after_id = None
-
-        def run_monitor():
-
-            if check_box_monitor_var.get() == 0 and self.run_after_id:
-                root.after_cancel(self.run_after_id)
-
-        
-            old_text = text1.get("1.0", "end-1c")
-            orig_text = root.clipboard_get()
-
-            if orig_text != old_text:
-                text1.delete("1.0", tk.END)
-                text1.insert(tk.END, orig_text)
-        
-            self.run_after_id = root.after(1000, run_monitor)
-
-        def monitor_clipboard(var):
-            if var.get() == 1:
-                run_monitor()
-            elif var.get() == 0 and self.run_after_id:
-                root.after_cancel(self.run_after_id)
-
-        # create the text areas
-
-        frame = tk.Frame(root)
-        frame.pack()
-
-        font = ("DejaVu Sans Mono", 12)
-        text1 = tk.Text(frame, font=font)
-        text2 = tk.Text(frame, font=font)
-
-
-        text1.insert(tk.END, "请点击按钮翻译剪贴板中的内容")
-
-        text1.pack(pady=10, fill='both', padx=10)
-        text2.pack(fill='both', padx=10)
-
-        
-        # start the main loop
-        root.mainloop()
+        self.view.root.mainloop()
 
 
 ##############################################################################
@@ -276,5 +191,4 @@ class TranslateGUILegacy(object):
 if __name__ == "__main__":
     gui = TranslateGUI()
     gui.run()
-    # tapi = TranslateAPI()
-    # print(tapi.translate("Hello, world"))
+
