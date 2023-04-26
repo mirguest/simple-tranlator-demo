@@ -102,6 +102,14 @@ class TranslateGUIModel:
         self.original_text = orig_text
         self.translated_text = self.tapi.translate(self.original_text)
 
+    def original(self):
+        """the original text"""
+        return self.original_text
+
+    def translated(self):
+        """the translated text"""
+        return self.translated_text
+
 class TranslateGUIView:
     """The View part of GUI"""
 
@@ -124,26 +132,23 @@ class TranslateGUIView:
         # create the button
         self.button = tk.Button(self.control_frame, text="Paste and Translate")
 
-        self.check_box_trim_var = tk.IntVar()
-        self.check_box_trim_var.set(1)
-        self.check_box_trim = tk.Checkbutton(self.control_frame,
+        check_box_trim_var = tk.IntVar()
+        check_box_trim_var.set(1)
+        check_box_trim = tk.Checkbutton(self.control_frame,
                                             text="去除换行符",
-                                            variable=self.check_box_trim_var)
+                                            variable=check_box_trim_var)
+        self.trim_widget = (check_box_trim_var, check_box_trim)
 
-        self.check_box_monitor_var = tk.IntVar()
-        self.check_box_monitor_var.set(0)
-        self.check_box_monitor = tk.Checkbutton(self.control_frame,
+        check_box_monitor_var = tk.IntVar()
+        check_box_monitor_var.set(0)
+        check_box_monitor = tk.Checkbutton(self.control_frame,
                                                 text="监听剪贴板",
-                                                variable=self.check_box_monitor_var)
-
-        # place the widgets on the window
-        # self.button.pack(pady=10)
-        # self.check_box_trim.pack(pady=10)
-        # self.check_box_monitor.pack(pady=10)
+                                                variable=check_box_monitor_var)
+        self.monitor_widget = (check_box_monitor_var, check_box_monitor)
 
         self.button.grid(row=0, column=0)
-        self.check_box_trim.grid(row=0, column=1)
-        self.check_box_monitor.grid(row=0, column=2)
+        self.trim_widget[1].grid(row=0, column=1)
+        self.monitor_widget[1].grid(row=0, column=2)
 
     def initialize_text_widgets(self):
         """Initialize the text widgets"""
@@ -152,36 +157,52 @@ class TranslateGUIView:
         self.frame.pack(fill='both', padx=10, pady=10, expand=True)
 
         font = ("DejaVu Sans Mono", 12)
-        self.text1 = tk.Text(self.frame, font=font)
-        self.text2 = tk.Text(self.frame, font=font)
 
+        self.texts = [] # there will be two text widgets
 
-        self.text1.insert(tk.END, "请点击按钮翻译剪贴板中的内容")
+        for i in range(2):
+            self.texts.append(tk.Text(self.frame, font=font))
 
-        # self.text1.pack(pady=10, fill='both', padx=10)
-        # self.text2.pack(fill='both', padx=10)
-        self.text1.grid(row=0, column=0, pady=5, sticky='nsew')
-        self.text2.grid(row=1, column=0, pady=5, sticky='nsew')
+        self.texts[0].insert(tk.END, "请点击按钮翻译剪贴板中的内容")
+
+        for i in range(2):
+            self.texts[i].grid(row=i, column=0, pady=5, sticky='nsew')
 
         self.frame.grid_columnconfigure(0, weight=1)
-        self.frame.grid_rowconfigure(0, weight=1)
-        self.frame.grid_rowconfigure(1, weight=1)
-        self.frame.grid_rowconfigure(0, minsize=self.frame.winfo_height()//2)
-        self.frame.grid_rowconfigure(1, minsize=self.frame.winfo_height()//2)
+
+        for i in range(2):
+            self.frame.grid_rowconfigure(i, weight=1)
+            self.frame.grid_rowconfigure(i, minsize=self.frame.winfo_height()//2)
 
     def get_clipboard(self):
         """Get the content from clipboard"""
         return self.root.clipboard_get()
 
-    def set_text1(self, text):
-        """Set the content in the original text widget"""
-        self.text1.delete("1.0", tk.END)
-        self.text1.insert(tk.END, text)
+    def get_trim_flag(self):
+        """Get the flag of trim or not"""
+        return self.trim_widget[0].get()
 
-    def set_text2(self, text):
+    def get_monitor_flag(self):
+        """Get the flag of monitor or not"""
+        return self.monitor_widget[0].get()
+
+    def configure_monitor(self, command):
+        """Set the callback of monitor widget"""
+        self.monitor_widget[1].config(command=command)
+
+    def configure_button(self, command):
+        """Set the callback of the paste button"""
+        self.button.config(command=command)
+
+    def set_original_text(self, text):
+        """Set the content in the original text widget"""
+        self.texts[0].delete("1.0", tk.END)
+        self.texts[0].insert(tk.END, text)
+
+    def set_translated_text(self, text):
         """Set the content in the translated text widget"""
-        self.text2.delete("1.0", tk.END)
-        self.text2.insert(tk.END, text)
+        self.texts[1].delete("1.0", tk.END)
+        self.texts[1].insert(tk.END, text)
 
 class TranslateGUIController:
     """The Controller part of GUI"""
@@ -190,9 +211,8 @@ class TranslateGUIController:
         self.model = model
         self.view = view
 
-        self.view.button.config(command=self.paste_and_translate)
-
-        self.view.check_box_monitor.config(command=self.monitor_clipboard)
+        self.view.configure_button(command=self.paste_and_translate)
+        self.view.configure_monitor(command=self.monitor_clipboard)
 
         self.run_after_id = None
 
@@ -200,7 +220,7 @@ class TranslateGUIController:
         """Paste and Translate"""
         orig_text = self.view.get_clipboard()
         # remove the CR
-        if self.view.check_box_trim_var.get() == 1:
+        if self.view.get_trim_flag() == 1:
             orig_text = orig_text.splitlines()
             orig_text = " ".join(orig_text)
         else:
@@ -208,27 +228,27 @@ class TranslateGUIController:
 
         self.model.translate(orig_text)
 
-        self.view.set_text1(self.model.original_text)
-        self.view.set_text2(self.model.translated_text)
+        self.view.set_original_text(self.model.original_text)
+        self.view.set_translated_text(self.model.translated_text)
 
     def monitor_clipboard(self):
         """When the checkbox is selected or unselected, this method is used"""
-        if self.view.check_box_monitor_var.get() == 1:
+        if self.view.get_monitor_flag() == 1:
             self.run_monitor()
-        elif self.view.check_box_monitor_var.get() == 0 and self.run_after_id:
+        elif self.view.get_monitor_flag() == 0 and self.run_after_id:
             self.view.root.after_cancel(self.run_after_id)
             self.run_after_id = None
 
     def run_monitor(self):
         """The monitor of clipboard"""
-        if self.view.check_box_monitor_var.get() == 0 and self.run_after_id:
+        if self.view.get_monitor_flag() == 0 and self.run_after_id:
             self.view.root.after_cancel(self.run_after_id)
 
         old_text = self.model.original_text
         orig_text = self.view.get_clipboard()
 
         if orig_text != old_text:
-            self.view.set_text1(orig_text)
+            self.view.set_original_text(orig_text)
 
         self.run_after_id = self.view.root.after(1000, self.run_monitor)
 
