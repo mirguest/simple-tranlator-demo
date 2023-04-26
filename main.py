@@ -85,26 +85,44 @@ class TranslateGUIModel(object):
 class TranslateGUIView(object):
 
     def __init__(self) -> None:
-        self.root = tk.Tk()
-
-        # create the button
-        self.button = tk.Button(self.root, text="Paste and Translate")
         
-        # place the widgets on the window
-        self.button.pack(pady=10)
+        self.initialize_main_window()
+        self.initialize_control_widgets()
+        self.initialize_text_widgets()
+      
+    def initialize_main_window(self):
+        self.root = tk.Tk()
+        self.root.title('Simple Translator Demo')
+        self.root.geometry('800x600')
+
+    def initialize_control_widgets(self):
+        # The frame includes control widgets
+        self.control_frame = tk.Frame(self.root)
+        self.control_frame.pack(fill='both', padx=10, pady=10, expand=True)
+        # create the button
+        self.button = tk.Button(self.control_frame, text="Paste and Translate")
 
         self.check_box_trim_var = tk.IntVar()
         self.check_box_trim_var.set(1)
-        self.check_box_trim = tk.Checkbutton(self.root, text="去除换行符", variable=self.check_box_trim_var)
-        self.check_box_trim.pack(pady=10)
+        self.check_box_trim = tk.Checkbutton(self.control_frame, text="去除换行符", variable=self.check_box_trim_var)
 
         self.check_box_monitor_var = tk.IntVar()
         self.check_box_monitor_var.set(0)
-        self.check_box_monitor = tk.Checkbutton(self.root, text="监听剪贴板", variable=self.check_box_monitor_var)
-        self.check_box_monitor.pack(pady=10)
+        self.check_box_monitor = tk.Checkbutton(self.control_frame, text="监听剪贴板", variable=self.check_box_monitor_var)
+                      
+        # place the widgets on the window
+        # self.button.pack(pady=10)
+        # self.check_box_trim.pack(pady=10)
+        # self.check_box_monitor.pack(pady=10)
 
+        self.button.grid(row=0, column=0)
+        self.check_box_trim.grid(row=0, column=1)
+        self.check_box_monitor.grid(row=0, column=2)
+
+    def initialize_text_widgets(self):
+        # The frame includes two text widgets
         self.frame = tk.Frame(self.root)
-        self.frame.pack()
+        self.frame.pack(fill='both', padx=10, pady=10, expand=True)
 
         font = ("DejaVu Sans Mono", 12)
         self.text1 = tk.Text(self.frame, font=font)
@@ -113,8 +131,16 @@ class TranslateGUIView(object):
 
         self.text1.insert(tk.END, "请点击按钮翻译剪贴板中的内容")
 
-        self.text1.pack(pady=10, fill='both', padx=10)
-        self.text2.pack(fill='both', padx=10)
+        # self.text1.pack(pady=10, fill='both', padx=10)
+        # self.text2.pack(fill='both', padx=10)
+        self.text1.grid(row=0, column=0, pady=5, sticky='nsew')
+        self.text2.grid(row=1, column=0, pady=5, sticky='nsew')
+
+        self.frame.grid_columnconfigure(0, weight=1)
+        self.frame.grid_rowconfigure(0, weight=1)
+        self.frame.grid_rowconfigure(1, weight=1)
+        self.frame.grid_rowconfigure(0, minsize=self.frame.winfo_height()//2)
+        self.frame.grid_rowconfigure(1, minsize=self.frame.winfo_height()//2)
 
     def get_clipboard(self):
         return self.root.clipboard_get()
