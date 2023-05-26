@@ -1,9 +1,12 @@
 #!/usr/bin/env python
 #-*- coding: utf-8
-import json
+"""A simple translator web service"""
+
+# import json
 from aiohttp import web
 
 async def handle(request):
+    """Handle the request"""
     print("======================================")
     print(request)
     print(request.headers)

@@ -107,7 +107,7 @@ class DeepLTranslateAPI(TranslateAPI):
 
     def translate(self, text: str) -> str:
         translated_text = ""
-        body = {k: v for k, v in self.params.items()}
+        body = dict(self.params)
         body["text"] = text
 
         try:
@@ -119,7 +119,7 @@ class DeepLTranslateAPI(TranslateAPI):
             response = request.json()
             if (len(response)) == 0:
                 return translated_text
-            
+
             response = response['translations']
             if (len(response)) == 0:
                 return translated_text
@@ -166,17 +166,42 @@ class TranslateGUIModel:
     def translated(self):
         """the translated text"""
         return self.translated_text
-    
+
     def select_vendor(self, vendor):
         """Select the real API"""
         # print(f"Change vendor to {vendor}")
         if vendor in self.api_factories:
             self.tapi = self.api_factories[vendor]
 
+class GUI:
+    """GUI structure"""
+
+    def __init__(self) -> None:
+        """Initialize"""
+
+        self.root = None
+
+        self.control_frame = None
+        self.vendor_frame = None
+        self.frame = None
+        self.selected_vendor_buttons = {}
+        self.button = None # translate
+
+    def get_root(self):
+        """get the root frame"""
+        return self.root
+
+    def get_frames(self):
+        """get frames in root frame"""
+        return self.control_frame, self.vendor_frame, self.frame
+
 class TranslateGUIView:
     """The View part of GUI"""
 
     def __init__(self) -> None:
+
+        self.gui = GUI()
+
         self.initialize_main_window()
         self.initialize_control_widgets()
         self.initialize_vendors()
@@ -185,80 +210,79 @@ class TranslateGUIView:
 
     def initialize_main_window(self):
         """Initialize the Tk main window"""
-        self.root = tk.Tk()
-        self.root.title('Simple Translator Demo')
-        self.root.geometry('800x600')
+        self.gui.root = tk.Tk()
+        self.gui.root.title('Simple Translator Demo')
+        self.gui.root.geometry('800x600')
 
     def initialize_control_widgets(self):
         """Initialize the control widgets"""
         # The frame includes control widgets
-        self.control_frame = tk.Frame(self.root)
-        self.control_frame.pack(fill='both', padx=10, pady=10, expand=True)
+        self.gui.control_frame = tk.Frame(self.gui.root)
+        self.gui.control_frame.pack(fill='both', padx=10, pady=10, expand=True)
         # create the button
-        self.button = tk.Button(self.control_frame, text="Paste and Translate")
+        self.gui.button = tk.Button(self.gui.control_frame, text="Paste and Translate")
 
         check_box_trim_var = tk.IntVar()
         check_box_trim_var.set(1)
-        check_box_trim = tk.Checkbutton(self.control_frame,
+        check_box_trim = tk.Checkbutton(self.gui.control_frame,
                                             text="去除换行符",
                                             variable=check_box_trim_var)
         self.trim_widget = (check_box_trim_var, check_box_trim)
 
         check_box_monitor_var = tk.IntVar()
         check_box_monitor_var.set(0)
-        check_box_monitor = tk.Checkbutton(self.control_frame,
+        check_box_monitor = tk.Checkbutton(self.gui.control_frame,
                                                 text="监听剪贴板",
                                                 variable=check_box_monitor_var)
         self.monitor_widget = (check_box_monitor_var, check_box_monitor)
 
-        self.button.grid(row=0, column=0)
+        self.gui.button.grid(row=0, column=0)
         self.trim_widget[1].grid(row=0, column=1)
         self.monitor_widget[1].grid(row=0, column=2)
 
     def initialize_text_widgets(self):
         """Initialize the text widgets"""
         # The frame includes two text widgets
-        self.frame = tk.Frame(self.root)
-        self.frame.pack(fill='both', padx=10, pady=10, expand=True)
+        self.gui.frame = tk.Frame(self.gui.root)
+        self.gui.frame.pack(fill='both', padx=10, pady=10, expand=True)
 
         font = ("DejaVu Sans Mono", 12)
 
         self.texts = [] # there will be two text widgets
 
         for i in range(2):
-            self.texts.append(tk.Text(self.frame, font=font))
+            self.texts.append(tk.Text(self.gui.frame, font=font))
 
         self.texts[0].insert(tk.END, "请点击按钮翻译剪贴板中的内容")
 
         for i in range(2):
             self.texts[i].grid(row=i, column=0, pady=5, sticky='nsew')
 
-        self.frame.grid_columnconfigure(0, weight=1)
+        self.gui.frame.grid_columnconfigure(0, weight=1)
 
         for i in range(2):
-            self.frame.grid_rowconfigure(i, weight=1)
-            self.frame.grid_rowconfigure(i, minsize=self.frame.winfo_height()//2)
+            self.gui.frame.grid_rowconfigure(i, weight=1)
+            self.gui.frame.grid_rowconfigure(i, minsize=self.gui.frame.winfo_height()//2)
 
     def initialize_vendors(self):
         """Initialize the vendor radiobuttons"""
-        self.vendor_frame = tk.Frame(self.root)
-        self.vendor_frame.pack(fill='both', padx=10, pady=2, expand=True)
+        self.gui.vendor_frame = tk.Frame(self.gui.root)
+        self.gui.vendor_frame.pack(fill='both', padx=10, pady=2, expand=True)
 
         self.selected_vendor = tk.StringVar(value=DEFAULT_API_VENDOR)
         self.selected_vendor.set(DEFAULT_API_VENDOR)
 
-        self.selected_vendor_buttons = {}
         support_vendors = API_FACTORIES.keys()
-        for i,v in enumerate(support_vendors):
-            radio_button = tk.Radiobutton(self.vendor_frame, 
-                                          variable=self.selected_vendor, 
-                                          text=v, value=v)
+        for i, vendor_name in enumerate(support_vendors):
+            radio_button = tk.Radiobutton(self.gui.vendor_frame,
+                                          variable=self.selected_vendor,
+                                          text=vendor_name, value=vendor_name)
             radio_button.grid(row=0, column=i)
-            self.selected_vendor_buttons[v] = radio_button
+            self.gui.selected_vendor_buttons[vendor_name] = radio_button
 
     def get_clipboard(self):
         """Get the content from clipboard"""
-        return self.root.clipboard_get()
+        return self.gui.root.clipboard_get()
 
     def get_trim_flag(self):
         """Get the flag of trim or not"""
@@ -274,7 +298,7 @@ class TranslateGUIView:
 
     def configure_button(self, command):
         """Set the callback of the paste button"""
-        self.button.config(command=command)
+        self.gui.button.config(command=command)
 
     def set_original_text(self, text):
         """Set the content in the original text widget"""
@@ -287,7 +311,8 @@ class TranslateGUIView:
         self.texts[1].insert(tk.END, text)
 
     def configure_vendor(self, command):
-        for button in self.selected_vendor_buttons.values():
+        """Configure the vendor buttons"""
+        for button in self.gui.selected_vendor_buttons.values():
             button.config(command=command)
 
     def get_selected_vendor(self):
@@ -359,7 +384,7 @@ class TranslateGUI:
 
     def run(self):
         """Run the GUI"""
-        self.view.root.mainloop()
+        self.view.gui.root.mainloop()
 
     def init_mvc(self):
         """Initialize MVC"""
